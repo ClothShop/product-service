@@ -5,6 +5,7 @@ import (
 	"fmt"
 	minio2 "github.com/ClothShop/product-service/internal/config/minio"
 	"github.com/ClothShop/product-service/internal/dto"
+	minio "github.com/minio/minio-go/v7"
 	"io"
 	"os"
 	"time"
