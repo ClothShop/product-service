@@ -1,1 +1,1 @@
-# product_service
+# product-service
