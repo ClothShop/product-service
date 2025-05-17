@@ -8,6 +8,7 @@ import (
 	"github.com/ClothShop/product-service/internal/repositories"
 	"github.com/jinzhu/copier"
 	"log"
+	"os"
 )
 
 func GetProducts() ([]dto.GetProduct, error) {
@@ -15,16 +16,22 @@ func GetProducts() ([]dto.GetProduct, error) {
 	if err != nil {
 		return nil, err
 	}
-	getProducts := make([]dto.GetProduct, len(products))
+
+	productDtos := make([]dto.GetProduct, len(products))
 	for i, product := range products {
-		copier.Copy(&getProducts[i], &product)
+		copier.Copy(&productDtos[i], &product)
+		urls := make([]string, len(product.Images))
+		for j, img := range product.Images {
+			urls[j] = img.URL
+		}
+		productDtos[i].Images = urls
 	}
-	return getProducts, nil
+
+	return productDtos, nil
 }
 
-func GetProduct(id uint) (*models.Product, error) {
+func GetProduct(id uint) (*dto.GetProduct, error) {
 	cacheKey := product_cache.BuildCacheKey(id)
-
 	if product, found := product_cache.GetFromCache(cacheKey); found {
 		log.Println("🟢 Cache hit for product_cache:", id)
 		return product, nil
@@ -35,30 +42,43 @@ func GetProduct(id uint) (*models.Product, error) {
 		return nil, err
 	}
 
-	product_cache.SetToCache(cacheKey, productFromDB)
-	return productFromDB, nil
+	var productDto dto.GetProduct
+	copier.Copy(&productDto, &productFromDB)
+	urls := make([]string, len(productFromDB.Images))
+	for j, img := range productFromDB.Images {
+		urls[j] = img.URL
+	}
+	productDto.Images = urls
+
+	product_cache.SetToCache(cacheKey, &productDto)
+	return &productDto, nil
 }
 
-func CreateProduct(productCreate *dto.ProductCreate) error {
+func CreateProduct(productCreate *dto.ProductCreate) (*dto.GetProduct, error) {
 	product := &models.Product{}
 	if err := copier.Copy(product, productCreate); err != nil {
-		return fmt.Errorf("failed to copy product data: %w", err)
+		return nil, fmt.Errorf("failed to copy product data: %w", err)
 	}
 
 	imageUrls := repositories.UploadFile(productCreate)
 	if imageUrls == nil {
-		return fmt.Errorf("failed to upload product images")
+		return nil, fmt.Errorf("failed to upload product images")
 	}
+	urls := make([]string, len(imageUrls))
 	for i := range product.Images {
-		product.Images[i] = models.Image{URL: imageUrls[i]}
+		product.Images[i] = models.Image{URL: "http://" + os.Getenv("MINIO_ENDPOINT") + "/" + os.Getenv("MINIO_BUCKET") + "/" + imageUrls[i]}
+		urls[i] = product.Images[i].URL
 	}
 
 	if err := repositories.Create(product); err != nil {
-		return err
+		return nil, err
 	}
 
-	product_cache.SetToCache(product_cache.BuildCacheKey(product.ID), product)
-	return nil
+	var productDto dto.GetProduct
+	copier.Copy(&productDto, &product)
+	productDto.Images = urls
+	product_cache.SetToCache(product_cache.BuildCacheKey(product.ID), &productDto)
+	return &productDto, nil
 }
 
 func UpdateProduct(productUpdate *dto.ProductUpdate) error {
@@ -75,7 +95,14 @@ func UpdateProduct(productUpdate *dto.ProductUpdate) error {
 		return err
 	}
 
-	product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), existingProduct)
+	var productDto dto.GetProduct
+	copier.Copy(&productDto, &existingProduct)
+	urls := make([]string, len(existingProduct.Images))
+	for j, img := range existingProduct.Images {
+		urls[j] = img.URL
+	}
+	productDto.Images = urls
+	product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), &productDto)
 	return nil
 }
 

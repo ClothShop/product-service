@@ -58,7 +58,8 @@ func CreateProduct(c *gin.Context) {
 		product.Images = files
 	}
 
-	if err := services.CreateProduct(&product); err != nil {
+	productDto, err := services.CreateProduct(&product)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "❌ Error creating product",
 			"error":   err.Error(),
@@ -66,7 +67,7 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, product)
+	c.JSON(http.StatusCreated, productDto)
 }
 
 func UpdateProduct(c *gin.Context) {
