@@ -1,38 +1,30 @@
 package repositories
 
 import (
+	"github.com/ClothShop/product-service/internal/config/db"
 	"github.com/ClothShop/product-service/internal/models"
-	"gorm.io/gorm"
 )
 
-type ProductRepository struct {
-	DB *gorm.DB
+func Create(product *models.Product) error {
+	return db.DB.Create(product).Error
 }
 
-func NewProductRepository(db *gorm.DB) *ProductRepository {
-	return &ProductRepository{DB: db}
-}
-
-func (repo *ProductRepository) Create(product *models.Product) error {
-	return repo.DB.Create(product).Error
-}
-
-func (repo *ProductRepository) GetAll() ([]models.Product, error) {
+func GetAll() ([]models.Product, error) {
 	var products []models.Product
-	err := repo.DB.Preload("Images").Find(&products).Error
+	err := db.DB.Preload("Images").Find(&products).Error
 	return products, err
 }
 
-func (repo *ProductRepository) GetByID(id uint) (*models.Product, error) {
+func GetByID(id uint) (*models.Product, error) {
 	var product models.Product
-	err := repo.DB.Preload("Images").First(&product, id).Error
+	err := db.DB.Preload("Images").First(&product, id).Error
 	return &product, err
 }
 
-func (repo *ProductRepository) Update(product *models.Product) error {
-	return repo.DB.Save(product).Error
+func Update(product *models.Product) error {
+	return db.DB.Save(product).Error
 }
 
-func (repo *ProductRepository) Delete(id uint) error {
-	return repo.DB.Delete(&models.Product{}, id).Error
+func Delete(id uint) error {
+	return db.DB.Delete(&models.Product{}, id).Error
 }

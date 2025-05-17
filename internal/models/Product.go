@@ -8,6 +8,6 @@ type Product struct {
 	Description string    `gorm:"type:text" json:"description"`
 	Price       float64   `gorm:"not null" json:"price"`
 	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
-
+	//size, quantity
 	Images []Image `gorm:"foreignKey:ProductID;constraint:OnDelete:CASCADE;" json:"images"`
 }

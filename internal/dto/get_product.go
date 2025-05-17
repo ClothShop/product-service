@@ -7,7 +7,7 @@ import (
 
 type GetProduct struct {
 	ID          uint           `json:"id"`
-	Name        string         `json:"product_name"`
+	Name        string         `json:"name"`
 	Description string         `json:"description"`
 	Price       float64        `json:"price"`
 	CreatedAt   time.Time      `json:"created_at"`

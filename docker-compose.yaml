@@ -1,25 +1,14 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:latest
-    container_name: product_db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "${DB_PORT}:${DB_PORT}"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
   redis:
     image: redis:latest
     container_name: product_cache
     restart: always
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
+    networks:
+      - cloth-shop-network
 
   minio:
     image: minio/minio:latest
@@ -34,15 +23,15 @@ services:
     volumes:
       - ~/minio/data:/data
     command: server --console-address :9001 /data
+    networks:
+      - cloth-shop-network
 
-  app:
+  product-service:
     build: .
     container_name: product-service
-    restart: always
     ports:
       - "8080:8080"
     depends_on:
-      - db
       - redis
       - minio
     environment:
@@ -51,7 +40,7 @@ services:
 
       JWT_SECRET: ${JWT_SECRET}
 
-      DB_HOST: db
+      DB_HOST: postgres_container
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -65,7 +54,14 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT}
       PRODUCT_CACHE_TTL: ${PRODUCT_CACHE_TTL}
+    networks:
+      - cloth-shop-network
+
 
 volumes:
   db_data:
   minio_data:
+
+networks:
+  cloth-shop-network:
+    external: true

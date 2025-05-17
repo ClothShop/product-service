@@ -11,14 +11,7 @@ import (
 	"time"
 )
 
-type ProductCache struct {
-}
-
-func NewProductCache() *ProductCache {
-	return &ProductCache{}
-}
-
-func (s *ProductCache) BuildCacheKey(id uint) string {
+func BuildCacheKey(id uint) string {
 	var ttlStr = os.Getenv("PRODUCT_CACHE_TTL")
 	var ttlInt, err = strconv.Atoi(ttlStr)
 	if err != nil {
@@ -31,7 +24,7 @@ func (s *ProductCache) BuildCacheKey(id uint) string {
 
 var cacheTTL time.Duration
 
-func (s *ProductCache) GetFromCache(key string) (*models.Product, bool) {
+func GetFromCache(key string) (*models.Product, bool) {
 	cached, err := cache.GetCache(key)
 	if err != nil || cached == "" {
 		return nil, false
@@ -45,7 +38,7 @@ func (s *ProductCache) GetFromCache(key string) (*models.Product, bool) {
 	return &product, true
 }
 
-func (s *ProductCache) SetToCache(key string, product *models.Product) {
+func SetToCache(key string, product *models.Product) {
 	bytes, err := json.Marshal(product)
 	if err != nil {
 		log.Println("⚠️ Failed to marshal product_cache to cache:", err)
@@ -54,6 +47,6 @@ func (s *ProductCache) SetToCache(key string, product *models.Product) {
 	cache.SetCache(key, string(bytes), cacheTTL)
 }
 
-func (s *ProductCache) DeleteFromCache(key string) {
+func DeleteFromCache(key string) {
 	cache.DeleteCache(key)
 }

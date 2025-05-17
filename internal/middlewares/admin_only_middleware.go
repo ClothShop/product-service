@@ -7,7 +7,7 @@ import (
 
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole, _ := c.Get("role")
+		userRole, _ := c.Get("Role")
 		if userRole != "Admin" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Request forbidden"})
 			return

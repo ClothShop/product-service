@@ -6,25 +6,12 @@ import (
 	"github.com/ClothShop/product-service/internal/dto"
 	"github.com/ClothShop/product-service/internal/models"
 	"github.com/ClothShop/product-service/internal/repositories"
-	"github.com/ClothShop/product-service/internal/repositories/minio"
 	"github.com/jinzhu/copier"
 	"log"
 )
 
-type ProductService struct {
-	Repo         *repositories.ProductRepository
-	Cache        *product_cache.ProductCache
-	ImageService *ImageService
-}
-
-func NewProductService(repo *repositories.ProductRepository,
-	cache *product_cache.ProductCache,
-	imageService *ImageService) *ProductService {
-	return &ProductService{Repo: repo, Cache: cache, ImageService: imageService}
-}
-
-func (s *ProductService) GetProducts() ([]dto.GetProduct, error) {
-	products, err := s.Repo.GetAll()
+func GetProducts() ([]dto.GetProduct, error) {
+	products, err := repositories.GetAll()
 	if err != nil {
 		return nil, err
 	}
@@ -35,30 +22,30 @@ func (s *ProductService) GetProducts() ([]dto.GetProduct, error) {
 	return getProducts, nil
 }
 
-func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
-	cacheKey := s.Cache.BuildCacheKey(id)
+func GetProduct(id uint) (*models.Product, error) {
+	cacheKey := product_cache.BuildCacheKey(id)
 
-	if product, found := s.Cache.GetFromCache(cacheKey); found {
+	if product, found := product_cache.GetFromCache(cacheKey); found {
 		log.Println("🟢 Cache hit for product_cache:", id)
 		return product, nil
 	}
 
-	productFromDB, err := s.FindProductById(id)
+	productFromDB, err := FindProductById(id)
 	if err != nil {
 		return nil, err
 	}
 
-	s.Cache.SetToCache(cacheKey, productFromDB)
+	product_cache.SetToCache(cacheKey, productFromDB)
 	return productFromDB, nil
 }
 
-func (s *ProductService) CreateProduct(productCreate *dto.ProductCreate) error {
+func CreateProduct(productCreate *dto.ProductCreate) error {
 	product := &models.Product{}
 	if err := copier.Copy(product, productCreate); err != nil {
 		return fmt.Errorf("failed to copy product data: %w", err)
 	}
 
-	imageUrls := minio.UploadFile(productCreate)
+	imageUrls := repositories.UploadFile(productCreate)
 	if imageUrls == nil {
 		return fmt.Errorf("failed to upload product images")
 	}
@@ -66,16 +53,16 @@ func (s *ProductService) CreateProduct(productCreate *dto.ProductCreate) error {
 		product.Images[i] = models.Image{URL: imageUrls[i]}
 	}
 
-	if err := s.Repo.Create(product); err != nil {
+	if err := repositories.Create(product); err != nil {
 		return err
 	}
 
-	s.Cache.SetToCache(s.Cache.BuildCacheKey(product.ID), product)
+	product_cache.SetToCache(product_cache.BuildCacheKey(product.ID), product)
 	return nil
 }
 
-func (s *ProductService) UpdateProduct(productUpdate *dto.ProductUpdate) error {
-	existingProduct, err := s.FindProductById(productUpdate.ID)
+func UpdateProduct(productUpdate *dto.ProductUpdate) error {
+	existingProduct, err := FindProductById(productUpdate.ID)
 	if err != nil {
 		return err
 	}
@@ -84,26 +71,26 @@ func (s *ProductService) UpdateProduct(productUpdate *dto.ProductUpdate) error {
 		return fmt.Errorf("failed to copy updated data: %w", err)
 	}
 
-	if err := s.Repo.Update(existingProduct); err != nil {
+	if err := repositories.Update(existingProduct); err != nil {
 		return err
 	}
 
-	s.Cache.SetToCache(s.Cache.BuildCacheKey(existingProduct.ID), existingProduct)
+	product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), existingProduct)
 	return nil
 }
 
-func (s *ProductService) DeleteProduct(id uint) error {
-	if _, err := s.FindProductById(id); err != nil {
+func DeleteProduct(id uint) error {
+	if _, err := FindProductById(id); err != nil {
 		return err
 	}
 
-	if err := s.Repo.Delete(id); err != nil {
+	if err := repositories.Delete(id); err != nil {
 		return err
 	}
-	s.Cache.DeleteFromCache(s.Cache.BuildCacheKey(id))
+	product_cache.DeleteFromCache(product_cache.BuildCacheKey(id))
 	return nil
 }
 
-func (s *ProductService) FindProductById(id uint) (*models.Product, error) {
-	return s.Repo.GetByID(id)
+func FindProductById(id uint) (*models.Product, error) {
+	return repositories.GetByID(id)
 }

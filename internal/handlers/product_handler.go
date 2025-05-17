@@ -8,11 +8,7 @@ import (
 	"strconv"
 )
 
-type ProductHandler struct {
-	Service *services.ProductService
-}
-
-func (h *ProductHandler) GetProduct(c *gin.Context) {
+func GetProduct(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -22,7 +18,7 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.Service.GetProduct(uint(id))
+	product, err := services.GetProduct(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "❌ Product not found",
@@ -34,8 +30,8 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, product)
 }
 
-func (h *ProductHandler) GetProducts(c *gin.Context) {
-	products, err := h.Service.GetProducts()
+func GetProducts(c *gin.Context) {
+	products, err := services.GetProducts()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "❌ Error fetching products",
@@ -46,7 +42,7 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
-func (h *ProductHandler) CreateProduct(c *gin.Context) {
+func CreateProduct(c *gin.Context) {
 	productAny, exists := c.Get("validatedProduct")
 	if !exists {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -62,7 +58,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		product.Images = files
 	}
 
-	if err := h.Service.CreateProduct(&product); err != nil {
+	if err := services.CreateProduct(&product); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "❌ Error creating product",
 			"error":   err.Error(),
@@ -73,7 +69,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	c.JSON(http.StatusCreated, product)
 }
 
-func (h *ProductHandler) UpdateProduct(c *gin.Context) {
+func UpdateProduct(c *gin.Context) {
 	productAny, exists := c.Get("validatedProduct")
 	if !exists {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -83,7 +79,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	}
 	product := productAny.(dto.ProductUpdate)
 
-	if err := h.Service.UpdateProduct(&product); err != nil {
+	if err := services.UpdateProduct(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "❌ Error updating product",
 			"error":   err.Error(),
@@ -94,7 +90,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, product)
 }
 
-func (h *ProductHandler) DeleteProduct(c *gin.Context) {
+func DeleteProduct(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -104,7 +100,7 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	if err := h.Service.DeleteProduct(uint(id)); err != nil {
+	if err := services.DeleteProduct(uint(id)); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "❌ Product not found",
 			"error":   err.Error(),

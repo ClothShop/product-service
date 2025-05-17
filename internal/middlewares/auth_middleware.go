@@ -5,26 +5,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"os"
-	"strings"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
-			return
-		}
-
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenStr == authHeader {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
+		accessToken, _ := c.Cookie("access_token")
+		if accessToken == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Access token is empty"})
 			return
 		}
 
 		secret := os.Getenv("JWT_SECRET")
 		claims := jwt.MapClaims{}
-		_, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		_, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secret), nil
 		})
 
@@ -33,8 +26,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_id", claims["user_id"])
-		c.Set("role", claims["user_role"])
+		c.Set("UserID", claims["UserID"])
+		c.Set("Role", claims["Role"])
 
 		c.Next()
 	}
