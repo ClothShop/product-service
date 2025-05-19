@@ -16,10 +16,10 @@ func GetProducts() ([]dto.GetProduct, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	productDtos := make([]dto.GetProduct, len(products))
 	for i, product := range products {
 		copier.Copy(&productDtos[i], &product)
+		productDtos[i].Category = product.Category.Name
 		urls := make([]string, len(product.Images))
 		for j, img := range product.Images {
 			urls[j] = img.URL
@@ -41,25 +41,31 @@ func GetProduct(id uint) (*dto.GetProduct, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	log.Println("productFromDB:", productFromDB)
 	var productDto dto.GetProduct
 	copier.Copy(&productDto, &productFromDB)
+	productDto.Category = productFromDB.Category.Name
 	urls := make([]string, len(productFromDB.Images))
 	for j, img := range productFromDB.Images {
 		urls[j] = img.URL
 	}
 	productDto.Images = urls
 
-	product_cache.SetToCache(cacheKey, &productDto)
+	go product_cache.SetToCache(cacheKey, &productDto)
 	return &productDto, nil
 }
 
 func CreateProduct(productCreate *dto.ProductCreate) (*dto.GetProduct, error) {
+	category, err := GetCategoryById(productCreate.CategoryID)
+	if err != nil {
+		return nil, err
+	}
 	product := &models.Product{}
 	if err := copier.Copy(product, productCreate); err != nil {
 		return nil, fmt.Errorf("failed to copy product data: %w", err)
 	}
 
+	product.CategoryID = category.ID
 	imageUrls := repositories.UploadFile(productCreate)
 	if imageUrls == nil {
 		return nil, fmt.Errorf("failed to upload product images")
@@ -76,8 +82,9 @@ func CreateProduct(productCreate *dto.ProductCreate) (*dto.GetProduct, error) {
 
 	var productDto dto.GetProduct
 	copier.Copy(&productDto, &product)
+	productDto.Category = category.Name
 	productDto.Images = urls
-	product_cache.SetToCache(product_cache.BuildCacheKey(product.ID), &productDto)
+	go product_cache.SetToCache(product_cache.BuildCacheKey(product.ID), &productDto)
 	return &productDto, nil
 }
 
@@ -85,6 +92,14 @@ func UpdateProduct(productUpdate *dto.ProductUpdate) error {
 	existingProduct, err := FindProductById(productUpdate.ID)
 	if err != nil {
 		return err
+	}
+
+	if productUpdate.CategoryID != nil {
+		existingCategory, err := GetCategoryById(*productUpdate.CategoryID)
+		if err != nil {
+			return err
+		}
+		existingProduct.Category = existingCategory
 	}
 
 	if err := copier.Copy(existingProduct, productUpdate); err != nil {
@@ -97,12 +112,14 @@ func UpdateProduct(productUpdate *dto.ProductUpdate) error {
 
 	var productDto dto.GetProduct
 	copier.Copy(&productDto, &existingProduct)
+	productDto.Category = existingProduct.Category.Name
 	urls := make([]string, len(existingProduct.Images))
 	for j, img := range existingProduct.Images {
 		urls[j] = img.URL
 	}
 	productDto.Images = urls
-	product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), &productDto)
+	go product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), &productDto)
+	copier.Copy(&productUpdate, &productDto)
 	return nil
 }
 
@@ -114,7 +131,7 @@ func DeleteProduct(id uint) error {
 	if err := repositories.Delete(id); err != nil {
 		return err
 	}
-	product_cache.DeleteFromCache(product_cache.BuildCacheKey(id))
+	go product_cache.DeleteFromCache(product_cache.BuildCacheKey(id))
 	return nil
 }
 
