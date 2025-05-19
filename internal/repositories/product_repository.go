@@ -11,13 +11,13 @@ func Create(product *models.Product) error {
 
 func GetAll() ([]models.Product, error) {
 	var products []models.Product
-	err := db.DB.Preload("Images").Find(&products).Error
+	err := db.DB.Preload("Images").Preload("Category").Find(&products).Error
 	return products, err
 }
 
 func GetByID(id uint) (*models.Product, error) {
 	var product models.Product
-	err := db.DB.Preload("Images").First(&product, id).Error
+	err := db.DB.Preload("Images").Preload("Category").First(&product, id).Error
 	return &product, err
 }
 

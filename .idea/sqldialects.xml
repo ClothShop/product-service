@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/internal/config/db/migrations/01_create_products_and_images.up.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/internal/config/db/migrations/02_alter_table_products_and_create_table_category.up.sql" dialect="PostgreSQL" />
+  </component>
+</project>
