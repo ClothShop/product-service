@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"github.com/ClothShop/product-service/internal/dto"
+	"github.com/ClothShop/product-service/internal/dto/product"
 	"github.com/ClothShop/product-service/internal/services"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -43,14 +44,14 @@ func GetProducts(c *gin.Context) {
 }
 
 func CreateProduct(c *gin.Context) {
-	productAny, exists := c.Get("validatedProduct")
+	productAny, exists := c.Get("validatedBody")
 	if !exists {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "❌ Invalid product context",
 		})
 		return
 	}
-	product := productAny.(dto.ProductCreate)
+	product := productAny.(product.Create)
 
 	form, err := c.MultipartForm()
 	if err == nil {
@@ -71,16 +72,26 @@ func CreateProduct(c *gin.Context) {
 }
 
 func UpdateProduct(c *gin.Context) {
-	productAny, exists := c.Get("validatedProduct")
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "❌ Invalid product ID",
+		})
+		return
+	}
+	productAny, exists := c.Get("validatedBody")
 	if !exists {
+		log.Println("invalid product context")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "❌ Invalid product context",
 		})
 		return
 	}
-	product := productAny.(dto.ProductUpdate)
+	productDto := productAny.(*product.Update)
 
-	if err := services.UpdateProduct(&product); err != nil {
+	if err := services.UpdateProduct(uint(id), productDto); err != nil {
+		log.Println(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "❌ Error updating product",
 			"error":   err.Error(),
@@ -88,7 +99,7 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, product)
+	c.JSON(http.StatusOK, productDto)
 }
 
 func DeleteProduct(c *gin.Context) {

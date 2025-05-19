@@ -2,6 +2,7 @@ package routes
 
 import (
 	"fmt"
+	"github.com/ClothShop/product-service/internal/dto/product"
 	"github.com/ClothShop/product-service/internal/handlers"
 	"github.com/ClothShop/product-service/internal/middlewares"
 	"github.com/gin-gonic/gin"
@@ -10,7 +11,7 @@ import (
 
 func RegisterRoutes() *gin.Engine {
 	apiVersion := os.Getenv("API_VERSION")
-	baseURL := fmt.Sprintf("/api/%s/products", apiVersion)
+	baseURL := fmt.Sprintf("/api/%s", apiVersion)
 
 	r := gin.Default()
 	//r.SetTrustedProxies([]string{"127.0.0.1"})
@@ -24,15 +25,26 @@ func RegisterRoutes() *gin.Engine {
 	//	MaxAge:           12 * time.Hour,
 	//}))
 
-	product := r.Group(baseURL)
+	productRoutes := r.Group(baseURL + "/products")
 	{
-		product.GET("", handlers.GetProducts)
-		product.GET("/:id", handlers.GetProduct)
-		product.Use(middlewares.AuthMiddleware())
-		product.DELETE("/:id", middlewares.AdminMiddleware(), handlers.DeleteProduct)
+		productRoutes.GET("/", handlers.GetProducts)
+		productRoutes.GET("/:id", handlers.GetProduct)
+		productRoutes.Use(middlewares.AuthMiddleware())
+		productRoutes.DELETE("/:id", middlewares.AdminMiddleware(), handlers.DeleteProduct)
 
-		product.POST("", middlewares.ProductCreateMiddleware(), middlewares.AdminMiddleware(), handlers.CreateProduct)
-		product.PUT("", middlewares.ProductUpdateMiddleware(), middlewares.AdminMiddleware(), handlers.UpdateProduct)
+		productRoutes.POST("/", middlewares.ProductCreateMiddleware(), middlewares.AdminMiddleware(), handlers.CreateProduct)
+		productRoutes.PUT("/:id", middlewares.ValidateBody(&product.Update{}), middlewares.AdminMiddleware(), handlers.UpdateProduct)
+	}
+
+	categoryRoutes := r.Group(baseURL + "/categories")
+	{
+		categoryRoutes.GET("", handlers.GetCategories)
+		//categoryRoutes.GET("/:id", handlers.GetCategory)
+		//categoryRoutes.Use(middlewares.AuthMiddleware())
+		//categoryRoutes.DELETE("/:id", middlewares.AdminMiddleware(), handlers.DeleteCategory)
+		//
+		//categoryRoutes.POST("", middlewares.ValidateBody(&category.Create{}), middlewares.AdminMiddleware(), handlers.CreateCategory)
+		//categoryRoutes.PUT("", middlewares.ValidateBody(&category.Update{}), middlewares.AdminMiddleware(), handlers.UpdateCategory)
 	}
 
 	return r

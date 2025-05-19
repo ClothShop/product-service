@@ -15,3 +15,12 @@ func GetCategoryById(id uint) (models.Category, error) {
 	}
 	return category, nil
 }
+
+func GetCategories() ([]models.Category, error) {
+	categories, err := repositories.GetCategories()
+	if err != nil {
+		log.Println("error getting categories:", err)
+		return []models.Category{}, fmt.Errorf("error getting categories")
+	}
+	return categories, nil
+}

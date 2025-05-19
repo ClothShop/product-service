@@ -10,3 +10,9 @@ func GetCategoryByID(id uint) (models.Category, error) {
 	err := db.DB.First(&category, id).Error
 	return category, err
 }
+
+func GetCategories() ([]models.Category, error) {
+	var categories []models.Category
+	err := db.DB.Find(&categories).Error
+	return categories, err
+}

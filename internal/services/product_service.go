@@ -3,7 +3,7 @@ package services
 import (
 	"fmt"
 	"github.com/ClothShop/product-service/internal/cache/product_cache"
-	"github.com/ClothShop/product-service/internal/dto"
+	"github.com/ClothShop/product-service/internal/dto/product"
 	"github.com/ClothShop/product-service/internal/models"
 	"github.com/ClothShop/product-service/internal/repositories"
 	"github.com/jinzhu/copier"
@@ -11,15 +11,14 @@ import (
 	"os"
 )
 
-func GetProducts() ([]dto.GetProduct, error) {
+func GetProducts() ([]product.GetProduct, error) {
 	products, err := repositories.GetAll()
 	if err != nil {
 		return nil, err
 	}
-	productDtos := make([]dto.GetProduct, len(products))
+	productDtos := make([]product.GetProduct, len(products))
 	for i, product := range products {
 		copier.Copy(&productDtos[i], &product)
-		productDtos[i].Category = product.Category.Name
 		urls := make([]string, len(product.Images))
 		for j, img := range product.Images {
 			urls[j] = img.URL
@@ -30,7 +29,7 @@ func GetProducts() ([]dto.GetProduct, error) {
 	return productDtos, nil
 }
 
-func GetProduct(id uint) (*dto.GetProduct, error) {
+func GetProduct(id uint) (*product.GetProduct, error) {
 	cacheKey := product_cache.BuildCacheKey(id)
 	if product, found := product_cache.GetFromCache(cacheKey); found {
 		log.Println("🟢 Cache hit for product_cache:", id)
@@ -42,9 +41,8 @@ func GetProduct(id uint) (*dto.GetProduct, error) {
 		return nil, err
 	}
 	log.Println("productFromDB:", productFromDB)
-	var productDto dto.GetProduct
+	var productDto product.GetProduct
 	copier.Copy(&productDto, &productFromDB)
-	productDto.Category = productFromDB.Category.Name
 	urls := make([]string, len(productFromDB.Images))
 	for j, img := range productFromDB.Images {
 		urls[j] = img.URL
@@ -55,41 +53,40 @@ func GetProduct(id uint) (*dto.GetProduct, error) {
 	return &productDto, nil
 }
 
-func CreateProduct(productCreate *dto.ProductCreate) (*dto.GetProduct, error) {
+func CreateProduct(productCreate *product.Create) (*product.GetProduct, error) {
 	category, err := GetCategoryById(productCreate.CategoryID)
 	if err != nil {
 		return nil, err
 	}
-	product := &models.Product{}
-	if err := copier.Copy(product, productCreate); err != nil {
+	productEntity := &models.Product{}
+	if err := copier.Copy(productEntity, productCreate); err != nil {
 		return nil, fmt.Errorf("failed to copy product data: %w", err)
 	}
 
-	product.CategoryID = category.ID
+	productEntity.CategoryID = category.ID
 	imageUrls := repositories.UploadFile(productCreate)
 	if imageUrls == nil {
 		return nil, fmt.Errorf("failed to upload product images")
 	}
 	urls := make([]string, len(imageUrls))
-	for i := range product.Images {
-		product.Images[i] = models.Image{URL: "http://" + os.Getenv("MINIO_ENDPOINT") + "/" + os.Getenv("MINIO_BUCKET") + "/" + imageUrls[i]}
-		urls[i] = product.Images[i].URL
+	for i := range productEntity.Images {
+		productEntity.Images[i] = models.Image{URL: "http://" + os.Getenv("MINIO_ENDPOINT") + "/" + os.Getenv("MINIO_BUCKET") + "/" + imageUrls[i]}
+		urls[i] = productEntity.Images[i].URL
 	}
 
-	if err := repositories.Create(product); err != nil {
+	if err := repositories.Create(productEntity); err != nil {
 		return nil, err
 	}
 
-	var productDto dto.GetProduct
-	copier.Copy(&productDto, &product)
-	productDto.Category = category.Name
+	var productDto product.GetProduct
+	copier.Copy(&productDto, &productEntity)
 	productDto.Images = urls
-	go product_cache.SetToCache(product_cache.BuildCacheKey(product.ID), &productDto)
+	go product_cache.SetToCache(product_cache.BuildCacheKey(productEntity.ID), &productDto)
 	return &productDto, nil
 }
 
-func UpdateProduct(productUpdate *dto.ProductUpdate) error {
-	existingProduct, err := FindProductById(productUpdate.ID)
+func UpdateProduct(id uint, productUpdate *product.Update) error {
+	existingProduct, err := FindProductById(id)
 	if err != nil {
 		return err
 	}
@@ -105,14 +102,13 @@ func UpdateProduct(productUpdate *dto.ProductUpdate) error {
 	if err := copier.Copy(existingProduct, productUpdate); err != nil {
 		return fmt.Errorf("failed to copy updated data: %w", err)
 	}
-
+	existingProduct.ID = id
 	if err := repositories.Update(existingProduct); err != nil {
 		return err
 	}
 
-	var productDto dto.GetProduct
+	var productDto product.GetProduct
 	copier.Copy(&productDto, &existingProduct)
-	productDto.Category = existingProduct.Category.Name
 	urls := make([]string, len(existingProduct.Images))
 	for j, img := range existingProduct.Images {
 		urls[j] = img.URL

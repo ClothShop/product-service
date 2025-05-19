@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	minio2 "github.com/ClothShop/product-service/internal/config/minio"
-	"github.com/ClothShop/product-service/internal/dto"
+	"github.com/ClothShop/product-service/internal/dto/product"
 	minio "github.com/minio/minio-go/v7"
 	"io"
 	"os"
 	"time"
 )
 
-func UploadFile(product *dto.ProductCreate) []string {
+func UploadFile(product *product.Create) []string {
 	if product.Images == nil || len(product.Images) == 0 {
 		return nil
 	}

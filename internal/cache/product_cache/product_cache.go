@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ClothShop/product-service/internal/cache"
-	"github.com/ClothShop/product-service/internal/dto"
+	"github.com/ClothShop/product-service/internal/dto/product"
 	"log"
 	"os"
 	"strconv"
@@ -24,13 +24,13 @@ func BuildCacheKey(id uint) string {
 
 var cacheTTL time.Duration
 
-func GetFromCache(key string) (*dto.GetProduct, bool) {
+func GetFromCache(key string) (*product.GetProduct, bool) {
 	cached, err := cache.GetCache(key)
 	if err != nil || cached == "" {
 		return nil, false
 	}
 
-	var product dto.GetProduct
+	var product product.GetProduct
 	if err := json.Unmarshal([]byte(cached), &product); err != nil {
 		log.Println("⚠️ Failed to unmarshal cache:", err)
 		return nil, false
@@ -38,7 +38,7 @@ func GetFromCache(key string) (*dto.GetProduct, bool) {
 	return &product, true
 }
 
-func SetToCache(key string, product *dto.GetProduct) {
+func SetToCache(key string, product *product.GetProduct) {
 	bytes, err := json.Marshal(product)
 	if err != nil {
 		log.Println("⚠️ Failed to marshal product_cache to cache:", err)

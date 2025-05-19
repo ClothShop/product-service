@@ -2,9 +2,10 @@ package middlewares
 
 import (
 	"encoding/json"
-	"github.com/ClothShop/product-service/internal/dto"
+	"github.com/ClothShop/product-service/internal/dto/product"
 	"github.com/ClothShop/product-service/internal/utils"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 )
 
@@ -20,17 +21,18 @@ func ProductCreateMiddleware() gin.HandlerFunc {
 		}
 
 		productJson := c.Request.FormValue("product")
-		var product dto.ProductCreate
-		if err := json.Unmarshal([]byte(productJson), &product); err != nil {
+		var productDto product.Create
+		if err := json.Unmarshal([]byte(productJson), &productDto); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "❌ Invalid product JSON",
 				"error":   err.Error(),
 			})
+			log.Println(err)
 			c.Abort()
 			return
 		}
 
-		if err := utils.ValidateStruct(product); err != nil {
+		if err := utils.ValidateStruct(productDto); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "❌ Validation failed",
 				"error":   err.Error(),
@@ -39,7 +41,7 @@ func ProductCreateMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("validatedProduct", product)
+		c.Set("validatedBody", productDto)
 		c.Next()
 	}
 }
