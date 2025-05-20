@@ -14,16 +14,6 @@ func RegisterRoutes() *gin.Engine {
 	baseURL := fmt.Sprintf("/api/%s", apiVersion)
 
 	r := gin.Default()
-	//r.SetTrustedProxies([]string{"127.0.0.1"})
-	//
-	//r.Use(cors.New(cors.Config{
-	//	AllowOrigins:     []string{"http://localhost:8888"},
-	//	AllowWildcard:    false,
-	//	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-	//	AllowHeaders:     []string{"Origin", "Authorization", "Content-Type"},
-	//	AllowCredentials: true,
-	//	MaxAge:           12 * time.Hour,
-	//}))
 
 	productRoutes := r.Group(baseURL + "/products")
 	{
@@ -39,12 +29,6 @@ func RegisterRoutes() *gin.Engine {
 	categoryRoutes := r.Group(baseURL + "/categories")
 	{
 		categoryRoutes.GET("", handlers.GetCategories)
-		//categoryRoutes.GET("/:id", handlers.GetCategory)
-		//categoryRoutes.Use(middlewares.AuthMiddleware())
-		//categoryRoutes.DELETE("/:id", middlewares.AdminMiddleware(), handlers.DeleteCategory)
-		//
-		//categoryRoutes.POST("", middlewares.ValidateBody(&category.Create{}), middlewares.AdminMiddleware(), handlers.CreateCategory)
-		//categoryRoutes.PUT("", middlewares.ValidateBody(&category.Update{}), middlewares.AdminMiddleware(), handlers.UpdateCategory)
 	}
 
 	return r

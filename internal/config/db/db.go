@@ -17,7 +17,7 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
@@ -35,7 +35,7 @@ func InitDB() {
 		log.Fatal(err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://internal/config/db/migrations", "postgres", driver)
+	m, err := migrate.NewWithDatabaseInstance("file://internal/config/db/migrations", os.Getenv("DB_NAME"), driver)
 	if err != nil {
 		log.Fatal(err)
 	}

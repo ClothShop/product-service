@@ -17,13 +17,8 @@ func GetProducts() ([]product.GetProduct, error) {
 		return nil, err
 	}
 	productDtos := make([]product.GetProduct, len(products))
-	for i, product := range products {
-		copier.Copy(&productDtos[i], &product)
-		urls := make([]string, len(product.Images))
-		for j, img := range product.Images {
-			urls[j] = img.URL
-		}
-		productDtos[i].Images = urls
+	for i, productEntity := range products {
+		productDtos[i] = *toDto(&productEntity)
 	}
 
 	return productDtos, nil
@@ -31,9 +26,9 @@ func GetProducts() ([]product.GetProduct, error) {
 
 func GetProduct(id uint) (*product.GetProduct, error) {
 	cacheKey := product_cache.BuildCacheKey(id)
-	if product, found := product_cache.GetFromCache(cacheKey); found {
+	if productFromCache, found := product_cache.GetFromCache(cacheKey); found {
 		log.Println("🟢 Cache hit for product_cache:", id)
-		return product, nil
+		return productFromCache, nil
 	}
 
 	productFromDB, err := FindProductById(id)
@@ -41,16 +36,10 @@ func GetProduct(id uint) (*product.GetProduct, error) {
 		return nil, err
 	}
 	log.Println("productFromDB:", productFromDB)
-	var productDto product.GetProduct
-	copier.Copy(&productDto, &productFromDB)
-	urls := make([]string, len(productFromDB.Images))
-	for j, img := range productFromDB.Images {
-		urls[j] = img.URL
-	}
-	productDto.Images = urls
+	productDto := toDto(productFromDB)
 
-	go product_cache.SetToCache(cacheKey, &productDto)
-	return &productDto, nil
+	go product_cache.SetToCache(cacheKey, productDto)
+	return productDto, nil
 }
 
 func CreateProduct(productCreate *product.Create) (*product.GetProduct, error) {
@@ -68,21 +57,17 @@ func CreateProduct(productCreate *product.Create) (*product.GetProduct, error) {
 	if imageUrls == nil {
 		return nil, fmt.Errorf("failed to upload product images")
 	}
-	urls := make([]string, len(imageUrls))
 	for i := range productEntity.Images {
-		productEntity.Images[i] = models.Image{URL: "http://" + os.Getenv("MINIO_ENDPOINT") + "/" + os.Getenv("MINIO_BUCKET") + "/" + imageUrls[i]}
-		urls[i] = productEntity.Images[i].URL
+		productEntity.Images[i] = models.Image{URL: "http://localhost:9000/" + os.Getenv("MINIO_BUCKET") + "/" + imageUrls[i]}
 	}
 
 	if err := repositories.Create(productEntity); err != nil {
 		return nil, err
 	}
 
-	var productDto product.GetProduct
-	copier.Copy(&productDto, &productEntity)
-	productDto.Images = urls
-	go product_cache.SetToCache(product_cache.BuildCacheKey(productEntity.ID), &productDto)
-	return &productDto, nil
+	productDto := toDto(productEntity)
+	go product_cache.SetToCache(product_cache.BuildCacheKey(productEntity.ID), productDto)
+	return productDto, nil
 }
 
 func UpdateProduct(id uint, productUpdate *product.Update) error {
@@ -107,14 +92,8 @@ func UpdateProduct(id uint, productUpdate *product.Update) error {
 		return err
 	}
 
-	var productDto product.GetProduct
-	copier.Copy(&productDto, &existingProduct)
-	urls := make([]string, len(existingProduct.Images))
-	for j, img := range existingProduct.Images {
-		urls[j] = img.URL
-	}
-	productDto.Images = urls
-	go product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), &productDto)
+	productDto := toDto(existingProduct)
+	go product_cache.SetToCache(product_cache.BuildCacheKey(existingProduct.ID), productDto)
 	copier.Copy(&productUpdate, &productDto)
 	return nil
 }
@@ -133,4 +112,15 @@ func DeleteProduct(id uint) error {
 
 func FindProductById(id uint) (*models.Product, error) {
 	return repositories.GetByID(id)
+}
+
+func toDto(productEntity *models.Product) *product.GetProduct {
+	var productDto product.GetProduct
+	copier.Copy(&productDto, &productEntity)
+	urls := make([]string, len(productEntity.Images))
+	for j, img := range productEntity.Images {
+		urls[j] = img.URL
+	}
+	productDto.Images = urls
+	return &productDto
 }

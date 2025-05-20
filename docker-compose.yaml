@@ -7,8 +7,6 @@ services:
     restart: always
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
-    networks:
-      - cloth-shop-network
 
   minio:
     image: minio/minio:latest
@@ -23,8 +21,6 @@ services:
     volumes:
       - ~/minio/data:/data
     command: server --console-address :9001 /data
-    networks:
-      - cloth-shop-network
 
   product-service:
     build: .
@@ -40,7 +36,7 @@ services:
 
       JWT_SECRET: ${JWT_SECRET}
 
-      DB_HOST: postgres_container
+      DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -54,14 +50,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT}
       PRODUCT_CACHE_TTL: ${PRODUCT_CACHE_TTL}
-    networks:
-      - cloth-shop-network
 
 
 volumes:
   db_data:
   minio_data:
-
-networks:
-  cloth-shop-network:
-    external: true
